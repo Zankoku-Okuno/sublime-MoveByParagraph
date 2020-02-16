@@ -51,68 +51,106 @@ class MyCommand(TextCommand):
 
 class MoveByParagraphCommand(MyCommand):
 
-    def _find_paragraph_position_forward(self, start):
+    def _is_empty(self, line):
+        # Okuno: I'm not sure why the second part of this clause is here
+        return not s # and self.view.substr(max(0, line.begin() - 1)) == '\n'
+
+    def _find_paragraph_position_forward(self, start, to_next):
         size = self.view.size()
         r = Region(start, size)
         lines = self.view.split_by_newlines(r)
+        # This is a state machine with two states: non-empty and empty.
+        # In state non-empty, stay there unless an empty line is found.
+        # In state empty, terminate when a non-empty line is found.
+        # In either state, terminate at end of file.
         found_empty = False
-        stop_line = None
         for n, line in enumerate(lines):
             s = self.view.substr(line)
-            if (not s and self.view.substr(max(0, line.begin() - 1)) == '\n'
-                    and n):
+            if self._is_empty(line):
                 found_empty = True
+                if not to_next:
+                    # if we started on an empty line, go to next paragraph
+                    # regardless of to_next setting
+                    if n == 0:
+                        to_next = True
+                    else:
+                        return line
             elif found_empty:
-                stop_line = line
-                break
-        if stop_line is None:
+                return line
+        else:
             if self.view.substr(Region(size - 1, size)) == '\n':
                 # We want to jump to the very end if we reached the file and
                 # it ends with a newline.  If the file ends with a newline,
                 # the lines array does not end with u'' as expected, which is
                 # why we need to do this
-                stop_line = Region(size, size)
+                return Region(size, size)
             else:
-                stop_line = lines[-1]
-        return stop_line
+                return lines[-1]
 
-    def _find_paragraph_position_backward(self, start):
+    def _find_paragraph_position_backward(self, start, to_next):
         r = Region(0, start)
         lines = self.view.split_by_newlines(r)
-        lines.reverse()
-        last_line = None
-        last_str = u''
-        stop_line = None
-        for line in lines:
-            s = self.view.substr(line)
-            if (not s and last_str and last_line is not None and
-                    lines[0] != last_line):
-                stop_line = last_line
-                break
-            last_line = line
-            last_str = s
-        if stop_line is None:
-            stop_line = lines[-1]
-        return stop_line
+        # This state machine has three states: unknown, skip empty, and skip
+        # non-empty (full). It starts in unknown, but moves to skip
+        # {empty,non-empty} if the next line is {empty,non-empty} respectively.
+        # It then skips lines until it finds one of the opposite type. here, the
+        # behavior is dirven by the no_next argument:
+        #  * If we were skipping blank lines, we've only found the end of the
+        #    prior paragraph, so if to_next is /not/ set, we should go to
+        #    skipping full lines.
+        #  * If we were skipping full lines, we've just found the start of the
+        #    current paragraph, so if to_next is set, we should go to skipping
+        #    blank lines.
+        # That said, it makes a lot more sense to draw out the state transition
+        # diagram and run it manually on some text.
+        skip_empty, skip_full = False, False
+        for n in range(len(lines) - 1, 0, -1):
+            line = lines[n-1]
+            if skip_empty:
+                if not self._is_empty(line):
+                    if to_next:
+                        return lines[n]
+                    else:
+                        skip_empty, skip_full = False, True
+            elif skip_full:
+                if self._is_empty(line):
+                    if to_next:
+                        skip_empty, skip_full = True, False
+                    else:
+                        return lines[n]
+            else:
+                if self._is_empty(line):
+                    skip_empty = True
+                else:
+                    skip_full = True
+        else:
+            return lines[0]
 
-    def find_paragraph_position(self, start, forward=False):
+    def find_paragraph_position(self, start, *, forward, to_next):
         dbg('Starting from {0}'.format(start))
         if forward:
-            return self._find_paragraph_position_forward(start)
+            return self._find_paragraph_position_forward(start, to_next)
         else:
-            return self._find_paragraph_position_backward(start)
+            return self._find_paragraph_position_backward(start, to_next)
 
-    def run(self, edit, extend=False, forward=False):
+    def run(self, edit, extend=False, forward=False, to_next=None):
         """
         The cursor will move to beginning of a non-empty line that succeeds
         an empty one.  Selection is supported when "extend" is True.
         """
+        # Default is to go to start of next paragraph when moving forward,
+        # but only to start of this paragraph when moving backward.
+        if to_next is None:
+            to_next = forward
+
         cursor = self.get_cursor()
         if cursor.a < cursor.b:
             start = cursor.end()
         else:
             start = cursor.begin()
-        line = self.find_paragraph_position(start, forward=forward)
+        line = self.find_paragraph_position(start,
+            forward=forward,
+            to_next=to_next)
         dbg('Stopping at {0}'.format(self.view.substr(line)))
 
         if extend:
