@@ -3,10 +3,17 @@ sublime-MoveByParagraph
 
 A Sublime Text 2 plugin extension to the move command
 
-A new command is added, `"move_by_paragraph"`.  Two `"args"` are accepted:
+A new command is added, `"move_by_paragraph"`.  Three `"args"` are accepted:
 
 - `"forward"` (bool): True if this moves down the page
 - `"extend"` (bool): True if this should create a selection
+- `"to_next"` (bool): True if the cursor should stay in this paragraph if possible.
+    Default is true when moving forward, false when backward.
+
+There is also one setting:
+
+- `"move_by_paragraph_ignores_whitespace"` (bool): Default false.
+    Set to true to treat lines containing only spaces and tabs as empty.
 
 
 Moving by Paragraph
@@ -22,7 +29,7 @@ Example (add this to your keymap):
 Example with selection (add this to your keymap):
 
      {"keys": ["ctrl+shift+up"], "command": "move_by_paragraph", "args": {"forward": false, "extend": true}},
-     {"keys": ["ctrl+shift+down"], "command": "move_by_paragraph", "args": {"forward": true, "extend": true}},
+     {"keys": ["ctrl+shift+down"], "command": "move_by_paragraph", "args": {"forward": true, "extend": true, "to_next": false}},
 
 ![Paragraph Selection](http://i.imgur.com/rXK3bcS.gif)
 
