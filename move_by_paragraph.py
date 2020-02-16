@@ -52,8 +52,12 @@ class MyCommand(TextCommand):
 class MoveByParagraphCommand(MyCommand):
 
     def _is_empty(self, line):
-        # Okuno: I'm not sure why the second part of this clause is here
-        return not s # and self.view.substr(max(0, line.begin() - 1)) == '\n'
+        s = self.view.substr(line)
+        if self.view.settings().get('move_by_paragraph_ignores_whitespace', False):
+            return not s.strip()
+        else:
+            # Okuno: I'm not sure why the second part of this clause is here
+            return not s # and self.view.substr(max(0, line.begin() - 1)) == '\n'
 
     def _find_paragraph_position_forward(self, start, to_next):
         size = self.view.size()
