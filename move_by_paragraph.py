@@ -1,16 +1,19 @@
 from __future__ import print_function
+import sublime
 from sublime import Region
 from sublime_plugin import TextCommand
 from collections import Iterable
 
 
-DEBUG = False
 
+DEBUG = False
 
 def dbg(*msg):
     if DEBUG:
         print(' '.join(map(str, msg)))
 
+
+SETTINGS_FILE = "MoveByParagraph.sublime-settings"
 
 class MyCommand(TextCommand):
 
@@ -51,9 +54,13 @@ class MyCommand(TextCommand):
 
 class MoveByParagraphCommand(MyCommand):
 
+    def __init__(self, view):
+        super(MoveByParagraphCommand, self).__init__(view)
+        self.settings = sublime.load_settings(SETTINGS_FILE)
+
     def _is_empty(self, line):
         s = self.view.substr(line)
-        if self.view.settings().get('move_by_paragraph_ignores_whitespace', False):
+        if self.settings.get('ignore_whitespace', False):
             return not s.strip()
         else:
             # Okuno: I'm not sure why the second part of this clause is here

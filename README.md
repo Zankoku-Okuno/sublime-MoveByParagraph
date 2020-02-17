@@ -10,9 +10,9 @@ A new command is added, `"move_by_paragraph"`.  Three `"args"` are accepted:
 - `"to_next"` (bool): True if the cursor should stay in this paragraph if possible.
     Default is true when moving forward, false when backward.
 
-There is also one setting:
+There is also one setting in `MoveByParagraph.sublime-settings`:
 
-- `"move_by_paragraph_ignores_whitespace"` (bool): Default false.
+- `"ignore_whitespace"` (bool): Default false.
     Set to true to treat lines containing only spaces and tabs as empty.
 
 
