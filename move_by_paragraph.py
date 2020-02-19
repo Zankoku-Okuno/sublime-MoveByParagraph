@@ -113,7 +113,7 @@ class MoveByParagraphCommand(MyCommand):
         # stop_at_paragraph_begin is True.
         # I think this edge case doesn't appear going backwards because the
         # for-loop ther doesn't inspect the line where the cursor starts.
-        if lines and lines[0].empty():
+        if lines:
             lines[0] = self.view.line(lines[0])
 
         for n, line in enumerate(lines[:-1]):
