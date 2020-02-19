@@ -106,6 +106,15 @@ class MoveByParagraphCommand(MyCommand):
         size = self.view.size()
         r = Region(start, size)
         lines = self.view.split_by_newlines(r)
+        # Ugly hack:
+        # If we start at the end of a line, the first region returned by
+        # split_by_newlines will be empty, and therefore count as a blank line,
+        # which causes the cursor to stop at the next line if
+        # stop_at_paragraph_begin is True.
+        # I think this edge case doesn't appear going backwards because the
+        # for-loop ther doesn't inspect the line where the cursor starts.
+        if lines and lines[0].empty():
+            lines[0] = self.view.line(lines[0])
 
         for n, line in enumerate(lines[:-1]):
             if (stop_at_paragraph_begin and
